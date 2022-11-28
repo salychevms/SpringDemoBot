@@ -4,7 +4,7 @@ import javax.persistence.Entity;
 import javax.persistence.Id;
 import java.sql.Timestamp;
 
-@Entity(name="users")
+@Entity(name = "users")
 public class User {
     @Id
     private Long chatId;

@@ -1,15 +1,21 @@
 package ru.springLearning.SpringDemoBot.service;
 
+import com.vdurmont.emoji.EmojiParser;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.commands.BotCommand;
 import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScopeDefault;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import ru.springLearning.SpringDemoBot.config.BotConfig;
 import ru.springLearning.SpringDemoBot.model.User;
@@ -32,7 +38,9 @@ public class TelegramBot extends TelegramLongPollingBot {
             "Type /mydata to see datastore about yourself\n\n" +
             "Type /help to see this message\n\n" +
             "Type /deletedata to delete your data from the bot storage\n\n" +
-            "Type /settings to see and define the bot setting";
+            "Type /settings to see and define the bot setting\n\n" +
+            "Type /register to registered\n\n" +
+            "Type /send <*_YOUR_MESSAGE_*> to send your message to all subscribers";
 
     public TelegramBot(BotConfig cfg) {
         this.cfg = cfg;
@@ -42,6 +50,8 @@ public class TelegramBot extends TelegramLongPollingBot {
         listOfCommand.add(new BotCommand("/deletedata", "delete your data"));
         listOfCommand.add(new BotCommand("/help", "info how to use this bot"));
         listOfCommand.add(new BotCommand("/settings", "set your preferences"));
+        listOfCommand.add(new BotCommand("/send", "send message to all subscribers"));
+        listOfCommand.add(new BotCommand("/register", "registered the user"));
         try {
             this.execute(new SetMyCommands(listOfCommand, new BotCommandScopeDefault(), null));
         } catch (TelegramApiException e) {
@@ -64,6 +74,15 @@ public class TelegramBot extends TelegramLongPollingBot {
         if (update.hasMessage() && update.getMessage().hasText()) {
             String msg = update.getMessage().getText();
             long chatId = update.getMessage().getChatId();
+
+            if (msg.contains("/send") && cfg.getAdminId() == chatId) {
+                var textToSend = EmojiParser.parseToUnicode(msg.substring(msg.indexOf(" ")));
+                var users = userRepository.findAll();
+                for (User user : users) {
+                    sendMessage(user.getChatId(), textToSend);
+                }
+            }
+
             switch (msg) {
                 case "/start":
                     registerUser(update.getMessage());
@@ -72,10 +91,69 @@ public class TelegramBot extends TelegramLongPollingBot {
                 case "/help":
                     sendMessage(chatId, HELP_TEXT);
                     break;
+                case "/register":
+                    register(chatId);
+                    break;
+                /*case "/send":
+                    break;*/
                 default:
                     sendMessage(chatId, msg + " - this command is not recognized!");
                     break;
             }
+        } else if (update.hasCallbackQuery()) {
+            String callBackData = update.getCallbackQuery().getData();
+            long messageId = update.getCallbackQuery().getMessage().getMessageId();
+            long chatId = update.getCallbackQuery().getMessage().getChatId();
+            if (callBackData.equals("YES_BUTTON")) {
+                String text = "You pressed YES button";
+                EditMessageText message = new EditMessageText();
+                message.setChatId(String.valueOf(chatId));
+                message.setText(text);
+                message.setMessageId((int) messageId);
+                try {
+                    execute(message);
+                } catch (TelegramApiException e) {
+                    log.error("Error occured: " + e.getMessage());
+                }
+            } else if (callBackData.equals("NO_BUTTON")) {
+                String text = "You pressed NO button";
+                EditMessageText message = new EditMessageText();
+                message.setChatId(String.valueOf(chatId));
+                message.setText(text);
+                message.setMessageId((int) messageId);
+                try {
+                    execute(message);
+                } catch (TelegramApiException e) {
+                    log.error("Error occured: " + e.getMessage());
+                }
+            }
+        }
+    }
+
+    //register method send the message with button menu
+    private void register(long chatId) {
+        SendMessage message = new SendMessage();
+        message.setChatId(String.valueOf(chatId));
+        message.setText("Do you really want to register?");
+        InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
+        List<InlineKeyboardButton> rowInline = new ArrayList<>();
+        var yButton = new InlineKeyboardButton();
+        yButton.setText("Yes");
+        yButton.setCallbackData("YES_BUTTON");
+        var nBotton = new InlineKeyboardButton();
+        nBotton.setText("No");
+        nBotton.setCallbackData("NO_BUTTON");
+        rowInline.add(yButton);
+        rowInline.add(nBotton);
+        rowsInline.add(rowInline);
+        markupInline.setKeyboard(rowsInline);
+        message.setReplyMarkup(markupInline);
+
+        try {
+            execute(message);
+        } catch (TelegramApiException e) {
+            log.error("Error occured: " + e.getMessage());
         }
     }
 
@@ -95,7 +173,9 @@ public class TelegramBot extends TelegramLongPollingBot {
     }
 
     private void startCommandRecieved(long chatId, String name) {
-        String answer = "Hi, " + name + ", nice to meet you!";
+        //check the emoji code on emojipedia.org
+        String answer = EmojiParser.parseToUnicode("Hi, " + name + ", nice to meet you!" + ":blush:");
+        //String answer = "Hi, " + name + ", nice to meet you!";
         log.info("Replied to user: " + name);
         sendMessage(chatId, answer);
     }
@@ -104,6 +184,29 @@ public class TelegramBot extends TelegramLongPollingBot {
         SendMessage message = new SendMessage();
         message.setChatId(String.valueOf(chatId));
         message.setText(textToSend);
+
+        /*==========Keyboard of bot menu==============*/
+        //class for markup bot menu
+        ReplyKeyboardMarkup keyboardMarkup = new ReplyKeyboardMarkup();
+        //list of menu buttons
+        List<KeyboardRow> keyboardRows = new ArrayList<>();
+        //first row of menu
+        KeyboardRow row = new KeyboardRow();
+        row.add("weather");
+        row.add("get random joke");
+        keyboardRows.add(row);
+        //second row of menu
+        row = new KeyboardRow();
+        row.add("register");
+        row.add("check my data");
+        row.add("delete my data");
+        //save rows in list
+        keyboardRows.add(row);
+        //set list in bot menu object
+        keyboardMarkup.setKeyboard(keyboardRows);
+
+        message.setReplyMarkup(keyboardMarkup);
+
         try {
             execute(message);
         } catch (TelegramApiException e) {

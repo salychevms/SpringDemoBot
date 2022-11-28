@@ -13,5 +13,6 @@ public class BotConfig {
     String botName;
     @Value("${bot.token}")
     String token;
-
+    @Value("${bot.adminId}")
+    Long adminId;
 }

@@ -35,6 +35,7 @@
             <scope>test</scope>
         </dependency>
 
+        <!--lib for telegram bot execution-->
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
@@ -52,6 +53,12 @@
             <version>42.5.1</version>
         </dependency>
 
+        <!--implementation emoji lob for tg bot, check the emoji code on emojipedia.org-->
+        <dependency>
+            <groupId>com.vdurmont</groupId>
+            <artifactId>emoji-java</artifactId>
+            <version>5.1.1</version>
+        </dependency>
 
     </dependencies>
 
