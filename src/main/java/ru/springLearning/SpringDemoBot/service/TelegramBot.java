@@ -32,15 +32,7 @@ public class TelegramBot extends TelegramLongPollingBot {
     private UserRepository userRepository;
 
     final BotConfig cfg;
-    static final String HELP_TEXT = "This bot  is created to demonstrate Spring capabilities.\n" +
-            "You can execute commands from the menu on the left or by typing a command:\n\n" +
-            "Type /start to see welcome message\n\n" +
-            "Type /mydata to see datastore about yourself\n\n" +
-            "Type /help to see this message\n\n" +
-            "Type /deletedata to delete your data from the bot storage\n\n" +
-            "Type /settings to see and define the bot setting\n\n" +
-            "Type /register to registered\n\n" +
-            "Type /send <*_YOUR_MESSAGE_*> to send your message to all subscribers";
+    static final String HELP_TEXT = "This bot  is created to demonstrate Spring capabilities.\n" + "You can execute commands from the menu on the left or by typing a command:\n\n" + "Type /start to see welcome message\n\n" + "Type /mydata to see datastore about yourself\n\n" + "Type /help to see this message\n\n" + "Type /deletedata to delete your data from the bot storage\n\n" + "Type /settings to see and define the bot setting\n\n" + "Type /register to registered\n\n" + "Type /send <*_YOUR_MESSAGE_*> to send your message to all subscribers";
     public static final String yesButton = "YES_BUTTON";
     public static final String noButton = "NO_BUTTON";
     private static final String ERROR_TEXT = "Error occured: ";
@@ -82,26 +74,25 @@ public class TelegramBot extends TelegramLongPollingBot {
                 var textToSend = EmojiParser.parseToUnicode(msg.substring(msg.indexOf(" ")));
                 var users = userRepository.findAll();
                 for (User user : users) {
-                    sendMessage(user.getChatId(), textToSend);
+                    prepareAndSendMessage(user.getChatId(), textToSend);
                 }
-            }
+            } else {
 
-            switch (msg) {
-                case "/start":
-                    registerUser(update.getMessage());
-                    startCommandRecieved(chatId, update.getMessage().getChat().getFirstName());
-                    break;
-                case "/help":
-                    sendMessage(chatId, HELP_TEXT);
-                    break;
-                case "/register":
-                    register(chatId);
-                    break;
-                /*case "/send":
-                    break;*/
-                default:
-                    sendMessage(chatId, msg + " - this command is not recognized!");
-                    break;
+                switch (msg) {
+                    case "/start":
+                        registerUser(update.getMessage());
+                        startCommandReceived(chatId, update.getMessage().getChat().getFirstName());
+                        break;
+                    case "/help":
+                        prepareAndSendMessage(chatId, HELP_TEXT);
+                        break;
+                    case "/register":
+                        register(chatId);
+                        break;
+                    default:
+                        prepareAndSendMessage(chatId, msg + " - this command is not recognized!");
+                        break;
+                }
             }
         } else if (update.hasCallbackQuery()) {
             String callBackData = update.getCallbackQuery().getData();
@@ -148,12 +139,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         rowsInline.add(rowInline);
         markupInline.setKeyboard(rowsInline);
         message.setReplyMarkup(markupInline);
-
-        try {
-            execute(message);
-        } catch (TelegramApiException e) {
-            log.error(ERROR_TEXT + e.getMessage());
-        }
+        executeMessage(message);
     }
 
     private void registerUser(Message msg) {
@@ -171,10 +157,9 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
     }
 
-    private void startCommandRecieved(long chatId, String name) {
+    private void startCommandReceived(long chatId, String name) {
         //check the emoji code on emojipedia.org
         String answer = EmojiParser.parseToUnicode("Hi, " + name + ", nice to meet you!" + ":blush:");
-        //String answer = "Hi, " + name + ", nice to meet you!";
         log.info("Replied to user: " + name);
         sendMessage(chatId, answer);
     }
@@ -203,13 +188,22 @@ public class TelegramBot extends TelegramLongPollingBot {
         keyboardRows.add(row);
         //set list in bot menu object
         keyboardMarkup.setKeyboard(keyboardRows);
-
         message.setReplyMarkup(keyboardMarkup);
+        executeMessage(message);
 
+    }
+
+    private void executeMessage(SendMessage message) {
         try {
             execute(message);
         } catch (TelegramApiException e) {
-            log.error("Error occured: " + e.getMessage());
+            log.error(ERROR_TEXT + e.getMessage());
         }
+    }
+    private void prepareAndSendMessage(long chatId, String textToSend){
+        SendMessage message = new SendMessage();
+        message.setChatId(String.valueOf(chatId));
+        message.setText(textToSend);
+        executeMessage(message);
     }
 }
