@@ -41,6 +41,9 @@ public class TelegramBot extends TelegramLongPollingBot {
             "Type /settings to see and define the bot setting\n\n" +
             "Type /register to registered\n\n" +
             "Type /send <*_YOUR_MESSAGE_*> to send your message to all subscribers";
+    public static final String yesButton = "YES_BUTTON";
+    public static final String noButton = "NO_BUTTON";
+    private static final String ERROR_TEXT = "Error occured: ";
 
     public TelegramBot(BotConfig cfg) {
         this.cfg = cfg;
@@ -104,7 +107,7 @@ public class TelegramBot extends TelegramLongPollingBot {
             String callBackData = update.getCallbackQuery().getData();
             long messageId = update.getCallbackQuery().getMessage().getMessageId();
             long chatId = update.getCallbackQuery().getMessage().getChatId();
-            if (callBackData.equals("YES_BUTTON")) {
+            if (callBackData.equals(yesButton)) {
                 String text = "You pressed YES button";
                 EditMessageText message = new EditMessageText();
                 message.setChatId(String.valueOf(chatId));
@@ -113,9 +116,9 @@ public class TelegramBot extends TelegramLongPollingBot {
                 try {
                     execute(message);
                 } catch (TelegramApiException e) {
-                    log.error("Error occured: " + e.getMessage());
+                    log.error(ERROR_TEXT + e.getMessage());
                 }
-            } else if (callBackData.equals("NO_BUTTON")) {
+            } else if (callBackData.equals(noButton)) {
                 String text = "You pressed NO button";
                 EditMessageText message = new EditMessageText();
                 message.setChatId(String.valueOf(chatId));
@@ -124,7 +127,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                 try {
                     execute(message);
                 } catch (TelegramApiException e) {
-                    log.error("Error occured: " + e.getMessage());
+                    log.error(ERROR_TEXT + e.getMessage());
                 }
             }
         }
@@ -140,10 +143,10 @@ public class TelegramBot extends TelegramLongPollingBot {
         List<InlineKeyboardButton> rowInline = new ArrayList<>();
         var yButton = new InlineKeyboardButton();
         yButton.setText("Yes");
-        yButton.setCallbackData("YES_BUTTON");
+        yButton.setCallbackData(yesButton);
         var nBotton = new InlineKeyboardButton();
         nBotton.setText("No");
-        nBotton.setCallbackData("NO_BUTTON");
+        nBotton.setCallbackData(noButton);
         rowInline.add(yButton);
         rowInline.add(nBotton);
         rowsInline.add(rowInline);
@@ -153,7 +156,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         try {
             execute(message);
         } catch (TelegramApiException e) {
-            log.error("Error occured: " + e.getMessage());
+            log.error(ERROR_TEXT + e.getMessage());
         }
     }
 
