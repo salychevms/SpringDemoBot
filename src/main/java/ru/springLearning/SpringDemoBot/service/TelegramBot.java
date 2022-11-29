@@ -109,27 +109,23 @@ public class TelegramBot extends TelegramLongPollingBot {
             long chatId = update.getCallbackQuery().getMessage().getChatId();
             if (callBackData.equals(yesButton)) {
                 String text = "You pressed YES button";
-                EditMessageText message = new EditMessageText();
-                message.setChatId(String.valueOf(chatId));
-                message.setText(text);
-                message.setMessageId((int) messageId);
-                try {
-                    execute(message);
-                } catch (TelegramApiException e) {
-                    log.error(ERROR_TEXT + e.getMessage());
-                }
+                executeEditMessageText(chatId, text, messageId);
             } else if (callBackData.equals(noButton)) {
                 String text = "You pressed NO button";
-                EditMessageText message = new EditMessageText();
-                message.setChatId(String.valueOf(chatId));
-                message.setText(text);
-                message.setMessageId((int) messageId);
-                try {
-                    execute(message);
-                } catch (TelegramApiException e) {
-                    log.error(ERROR_TEXT + e.getMessage());
-                }
+                executeEditMessageText(chatId, text, messageId);
             }
+        }
+    }
+
+    private void executeEditMessageText(long chatId, String text, long messageId) {
+        EditMessageText message = new EditMessageText();
+        message.setChatId(String.valueOf(chatId));
+        message.setText(text);
+        message.setMessageId((int) messageId);
+        try {
+            execute(message);
+        } catch (TelegramApiException e) {
+            log.error(ERROR_TEXT + e.getMessage());
         }
     }
 
