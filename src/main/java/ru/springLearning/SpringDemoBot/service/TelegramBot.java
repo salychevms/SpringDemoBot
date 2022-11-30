@@ -3,6 +3,7 @@ package ru.springLearning.SpringDemoBot.service;
 import com.vdurmont.emoji.EmojiParser;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands;
@@ -18,6 +19,8 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKe
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import ru.springLearning.SpringDemoBot.config.BotConfig;
+import ru.springLearning.SpringDemoBot.model.Ads;
+import ru.springLearning.SpringDemoBot.model.AdsRepository;
 import ru.springLearning.SpringDemoBot.model.User;
 import ru.springLearning.SpringDemoBot.model.UserRepository;
 
@@ -30,12 +33,14 @@ import java.util.List;
 public class TelegramBot extends TelegramLongPollingBot {
     @Autowired
     private UserRepository userRepository;
+    @Autowired
+    private AdsRepository adsRepository;
 
     final BotConfig cfg;
-    static final String HELP_TEXT = "This bot  is created to demonstrate Spring capabilities.\n" + "You can execute commands from the menu on the left or by typing a command:\n\n" + "Type /start to see welcome message\n\n" + "Type /mydata to see datastore about yourself\n\n" + "Type /help to see this message\n\n" + "Type /deletedata to delete your data from the bot storage\n\n" + "Type /settings to see and define the bot setting\n\n" + "Type /register to registered\n\n" + "Type /send <*_YOUR_MESSAGE_*> to send your message to all subscribers";
-    public static final String yesButton = "YES_BUTTON";
-    public static final String noButton = "NO_BUTTON";
-    private static final String ERROR_TEXT = "Error occured: ";
+    private static final String HELP_TEXT = "This bot  is created to demonstrate Spring capabilities.\n" + "You can execute commands from the menu on the left or by typing a command:\n\n" + "Type /start to see welcome message\n\n" + "Type /mydata to see datastore about yourself\n\n" + "Type /help to see this message\n\n" + "Type /deletedata to delete your data from the bot storage\n\n" + "Type /settings to see and define the bot setting\n\n" + "Type /register to registered\n\n" + "Type /send <*_YOUR_MESSAGE_*> to send your message to all subscribers";
+    private static final String yesButton = "YES_BUTTON";
+    private static final String noButton = "NO_BUTTON";
+    private static final String ERROR_TEXT = "Error occurred: ";
 
     public TelegramBot(BotConfig cfg) {
         this.cfg = cfg;
@@ -200,10 +205,22 @@ public class TelegramBot extends TelegramLongPollingBot {
             log.error(ERROR_TEXT + e.getMessage());
         }
     }
-    private void prepareAndSendMessage(long chatId, String textToSend){
+
+    private void prepareAndSendMessage(long chatId, String textToSend) {
         SendMessage message = new SendMessage();
         message.setChatId(String.valueOf(chatId));
         message.setText(textToSend);
         executeMessage(message);
+    }
+
+    @Scheduled(cron = "${cron.scheduler}")
+    private void sendAds() {
+        var ads = adsRepository.findAll();
+        var users = userRepository.findAll();
+        for (Ads ad : ads) {
+            for (User user : users) {
+                prepareAndSendMessage(user.getChatId(), ad.getAd());
+            }
+        }
     }
 }
